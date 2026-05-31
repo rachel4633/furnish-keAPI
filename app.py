@@ -32,7 +32,7 @@ MPESA_CONSUMER_KEY = "H6qZA1X2g4LQjLbKRfAui2MFeFA33fUUfpmdb8xekedt4vHK"  # Repla
 MPESA_CONSUMER_SECRET = "KAeN9yDs4uJ5yYtpAfuAR6dM0Y2G9FY5JKKQxxmceDRMkkRhzsZHYMmMQXwUEkxm"  # Replace with your secret
 MPESA_PASSKEY = "bfb279f9aa9bdbcf158e97dd71a467cd2e0c893059b10f78e6b72ada1ed2c919"
 MPESA_SHORTCODE = "174379"  # Test shortcode (replace with your business shortcode)
-MPESA_CALLBACK_URL = "https://furnish-ke-api.com/api/payment/callback"  # Replace with your callback URL
+MPESA_CALLBACK_URL = "https://furnish-ke-api.onrender.com/api/payment/callback"  # Replace with your callback URL
 
 # ═══════════════════════════════════════════
 # DATABASE CONNECTION — Railway MySQL
@@ -79,7 +79,7 @@ def get_mpesa_token():
             "Content-Type": "application/json"
         }
         
-        response = requests.post(
+        response = requests.get(
             "https://sandbox.safaricom.co.ke/oauth/v1/generate?grant_type=client_credentials",
             headers=headers,
             timeout=10
