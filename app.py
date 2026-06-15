@@ -3,13 +3,16 @@ from flask_cors import CORS
 import pymysql
 from datetime import datetime
 import os
-import bcrypt  # Make sure bcrypt is installed in your Render environment
+import bcrypt  # Make sure bcrypt is installed in your environment
 
 app = Flask(__name__)
 
+# Allowed frontend origins
+ALLOWED_ORIGINS = ["https://youngdigitalfurniture.co.ke", "http://localhost:5173"]
+
 CORS(app, resources={
     r"/api/*": {
-        "origins": "*",
+        "origins": ALLOWED_ORIGINS,
         "methods": ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
         "allow_headers": ["Content-Type", "Authorization"]
     }
@@ -19,7 +22,14 @@ CORS(app, resources={
 def handle_options():
     if request.method == "OPTIONS":
         response = app.make_default_options_response()
-        response.headers["Access-Control-Allow-Origin"] = "*"
+        
+        # Dynamically mirror the origin if it's in your allowed list
+        origin = request.headers.get("Origin")
+        if origin in ALLOWED_ORIGINS:
+            response.headers["Access-Control-Allow-Origin"] = origin
+        else:
+            response.headers["Access-Control-Allow-Origin"] = "https://youngdigitalfurniture.co.ke"
+
         response.headers["Access-Control-Allow-Methods"] = "GET, POST, PUT, DELETE, OPTIONS"
         response.headers["Access-Control-Allow-Headers"] = "Content-Type, Authorization"
         return response
@@ -29,8 +39,8 @@ def handle_options():
 # ═══════════════════════════════════════════
 def get_db_connection():
     return pymysql.connect(
-        host     = os.environ.get("DB_HOST"),
-        port     = int(os.environ.get("DB_PORT")),
+        host     = os.environ.get("DB_HOST") or "localhost", 
+        port     = int(os.environ.get("DB_PORT") or 3306),
         user     = os.environ.get("DB_USER"),
         password = os.environ.get("DB_PASSWORD"),
         database = os.environ.get("DB_NAME"),
@@ -52,7 +62,7 @@ def is_admin(user_id):
         return False
 
 # ═══════════════════════════════════════════
-# SIGN UP
+# SIGN UP (WITH DUPLICATE SECURITY CHECK)
 # ═══════════════════════════════════════════
 @app.route("/api/signup", methods=["POST"])
 def signup():
@@ -62,14 +72,29 @@ def signup():
         password = request.form.get("password")
         phone    = request.form.get("phone")
 
+        connection = get_db_connection()
+        cursor = connection.cursor()
+
+        # Check if username OR email already exists to prevent database crashes
+        cursor.execute(
+            "SELECT id FROM furniture_users WHERE username = %s OR email = %s", 
+            (username, email)
+        )
+        existing_user = cursor.fetchone()
+
+        if existing_user:
+            connection.close()
+            return jsonify({
+                "message": "Username or Email already exists. Please choose a different one.",
+                "status": "error"
+            }), 400
+
         # Hash password securely
         hashed = bcrypt.hashpw(
             password.encode('utf-8'),
             bcrypt.gensalt()
         ).decode('utf-8')
 
-        connection = get_db_connection()
-        cursor = connection.cursor()
         sql = """INSERT INTO furniture_users 
                  (username, email, password, phone, role) 
                  VALUES (%s, %s, %s, %s, 'customer')"""
@@ -277,7 +302,6 @@ def delete_product(product_id):
         })
     except Exception as e:
         return jsonify({"message": str(e), "status": "error"}), 500
-
 
 if __name__ == "__main__":
     app.run(debug=True)
