@@ -8,7 +8,9 @@ import bcrypt  # Make sure bcrypt is installed in your environment
 app = Flask(__name__)
 
 # Allowed frontend origins
-ALLOWED_ORIGINS = ["https://youngdigitalfurniture.co.ke", "http://localhost:5173"]
+ALLOWED_ORIGINS = ["https://youngdigitalfurniture.co.ke", 
+                    "https://www.youngdigitalfurniture.co.ke",
+                    "http://localhost:5173"]
 
 CORS(app, resources={
     r"/api/*": {
@@ -62,15 +64,21 @@ def is_admin(user_id):
         return False
 
 # ═══════════════════════════════════════════
-# SIGN UP (WITH DUPLICATE SECURITY CHECK)
+# SIGN UP 
 # ═══════════════════════════════════════════
-@app.route("/api/signup", methods=["POST"])
+@app.route("/api/signup", methods=["POST", "OPTIONS"])
 def signup():
+    if request.method == "OPTIONS":
+        return handle_options()
+        
     try:
         username = request.form.get("username")
         email    = request.form.get("email")
         password = request.form.get("password")
         phone    = request.form.get("phone")
+
+        if not username or not email or not password:
+            return jsonify({"message": "Missing required fields", "status": "error"}), 400
 
         connection = get_db_connection()
         cursor = connection.cursor()
@@ -120,8 +128,11 @@ def signup():
 # ═══════════════════════════════════════════
 # SIGN IN
 # ═══════════════════════════════════════════
-@app.route("/api/signin", methods=["POST"])
+@app.route("/api/signin", methods=["POST", "OPTIONS"])
 def signin():
+    if request.method == "OPTIONS":
+        return handle_options()
+
     try:
         email    = request.form.get("email")
         password = request.form.get("password")
