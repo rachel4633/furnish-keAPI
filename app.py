@@ -278,5 +278,6 @@ def delete_product(product_id):
     except Exception as e:
         return jsonify({"message": str(e), "status": "error"}), 500
 
+
 if __name__ == "__main__":
     app.run(debug=True)
