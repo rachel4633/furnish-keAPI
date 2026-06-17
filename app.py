@@ -37,17 +37,33 @@ def handle_options():
         return response
 
 # ═══════════════════════════════════════════
-# DATABASE CONNECTION
+# DATABASE CONNECTION (WITH RESILIENT FALLBACKS)
 # ═══════════════════════════════════════════
 def get_db_connection():
-    return pymysql.connect(
-        host     = os.environ.get("DB_HOST") or "localhost", 
-        port     = int(os.environ.get("DB_PORT") or 3306),
-        user     = os.environ.get("DB_USER"),
-        password = os.environ.get("DB_PASSWORD"),
-        database = os.environ.get("DB_NAME"),
-        cursorclass=pymysql.cursors.DictCursor
-    )
+    try:
+        # Get values from environment variables, or fallback to standard MySQL defaults
+        db_host = os.environ.get("DB_HOST") or "localhost"
+        
+        # Safe integer parsing for the database port
+        raw_port = os.environ.get("DB_PORT")
+        db_port = int(raw_port) if raw_port and raw_port.isdigit() else 3306
+        
+        db_user = os.environ.get("DB_USER") or "root"
+        db_pass = os.environ.get("DB_PASSWORD") or ""
+        db_name = os.environ.get("DB_NAME") or "furniture_db"
+
+        return pymysql.connect(
+            host=db_host,
+            port=db_port,
+            user=db_user,
+            password=db_pass,
+            database=db_name,
+            cursorclass=pymysql.cursors.DictCursor,
+            connect_timeout=10  # Stops the server from hanging forever if Railway goes down
+        )
+    except Exception as db_err:
+        print(f"DATABASE CONNECTION ERROR DETAILS: {str(db_err)}")
+        raise db_err
 
 # ═══════════════════════════════════════════
 # HELPER CHECK IF USER IS ADMIN
